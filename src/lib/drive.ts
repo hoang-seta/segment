@@ -2,21 +2,20 @@ import { google } from 'googleapis';
 import fs from 'fs';
 import path from 'path';
 
-const KEYFILE = process.env['GOOGLE_APPLICATION_CREDENTIALS'];
 const PARENT_FOLDER_ID = process.env['DRIVE_FOLDER_ID'];
 const SCOPES = ['https://www.googleapis.com/auth/drive'];
 
 async function getAuthClient() {
-    if (!KEYFILE) {
+    const credentialsJson = process.env['GOOGLE_APPLICATION_CREDENTIALS'];
+    
+    if (!credentialsJson) {
         throw new Error('GOOGLE_APPLICATION_CREDENTIALS environment variable is not set');
     }
     
-    if (!fs.existsSync(KEYFILE)) {
-        throw new Error(`Service account key file not found at: ${KEYFILE}`);
-    }
+    const credentials = JSON.parse(credentialsJson);
     
     const auth = new google.auth.GoogleAuth({
-        keyFile: KEYFILE,
+        credentials: credentials,
         scopes: SCOPES,
     });
     return auth;
