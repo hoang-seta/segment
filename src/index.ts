@@ -7,6 +7,7 @@ import { uploadClipToMinIO } from './lib/minio';
 import prisma from './lib/prisma';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
+import { uploadClipToDrive } from './lib/drive';
 
 const execFileAsync = promisify(execFile);
 
@@ -35,6 +36,15 @@ async function processVideoFromUrl(video: Video, tempFile: string): Promise<void
     });
     for (const clip of clips) {
         const clipPath = await cutVideo(tempFile, clip);
+
+        const driveClipUrl = await uploadClipToDrive(video.videoID, clipPath);
+        if (driveClipUrl !== 'file not found') {
+            await prisma.clip.update({
+                where: { id: clip.id },
+                data: { driveClipUrl: driveClipUrl },
+            });
+        }
+
         const uploadedUrl = await uploadClipToMinIO(tempFile, clipPath);
         if (uploadedUrl !== 'file not found') {
             await prisma.clip.update({
@@ -241,8 +251,8 @@ async function insertClip(videoID: string, clips: ClipTime[]) {
 
 main();
 
-// insertClip('61470186', [
-//     { startTime: '00:00:22', endTime: '00:00:33' },
-//     { startTime: '00:00:33', endTime: '00:00:43' },
-//     { startTime: '00:00:44', endTime: '00:00:56' },
+// insertClip('61490169', [
+//     { startTime: '00:00:00', endTime: '00:00:11' },
+//     { startTime: '00:00:13', endTime: '00:00:26' },
+//     // { startTime: '00:00:44', endTime: '00:00:56' },
 // ]);
