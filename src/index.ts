@@ -38,35 +38,42 @@ async function processVideoFromUrl(video: Video, tempFile: string): Promise<void
     for (const clip of clips) {
         const clipPath = await cutVideo(tempFile, clip);
 
-        const driveClipUrl = await uploadClipToDrive(video.videoID, clipPath);
-        if (driveClipUrl !== 'file not found') {
-            await prisma.clip.update({
-                where: { id: clip.id },
-                data: { driveClipUrl: driveClipUrl },
-            });
-        }
+        await uploadClipToDrive(video.videoID, clipPath);
+        // if (driveClipUrl !== 'file not found') {
+        //     await prisma.clip.update({
+        //         where: { id: clip.id },
+        //         data: { driveClipUrl: driveClipUrl },
+        //     });
+        // }
 
-        const uploadedUrl = await uploadClipToMinIO(tempFile, clipPath);
-        if (uploadedUrl !== 'file not found') {
-            await prisma.clip.update({
-                where: { id: clip.id },
-                data: { clipPath: uploadedUrl },
-            });
-        }
+        // const uploadedUrl = await uploadClipToMinIO(tempFile, clipPath);
+        // if (uploadedUrl !== 'file not found') {
+        //     await prisma.clip.update({
+        //         where: { id: clip.id },
+        //         data: { clipPath: uploadedUrl },
+        //     });
+        // }
         const xmlFile = await createXMLFile(video, tempFile, clip);
-        const uploadedXmlUrl = await uploadClipToMinIO(tempFile, xmlFile);
-        if (uploadedXmlUrl !== 'file not found') {
-            await prisma.clip.update({
-                where: { id: clip.id },
-                data: { xmlPath: uploadedXmlUrl },
-            });
+        await uploadClipToDrive(video.videoID, xmlFile);
+        // if (driveClipUrl !== 'file not found') {
+        //     await prisma.clip.update({
+        //         where: { id: clip.id },
+        //         data: { driveClipUrl: driveClipUrl },
+        //     });
+        // }
+        // await uploadClipToMinIO(tempFile, xmlFile);
+        // if (uploadedXmlUrl !== 'file not found') {
+        //     await prisma.clip.update({
+        //         where: { id: clip.id },
+        //         data: { xmlPath: uploadedXmlUrl },
+        //     });
+        // }
+        if (fs.existsSync(clipPath)) {
+            fs.unlinkSync(clipPath);
         }
-        // if (fs.existsSync(clipPath)) {
-        //     fs.unlinkSync(clipPath);
-        // }
-        // if (fs.existsSync(xmlFile)) {
-        //     fs.unlinkSync(xmlFile);
-        // }
+        if (fs.existsSync(xmlFile)) {
+            fs.unlinkSync(xmlFile);
+        }
 
     }
 }
@@ -212,7 +219,7 @@ async function main() {
                 console.log("Start processing video: ", video.videoID);
                 // Get rendition URL once
                 const renditionUrl = await getRenditionUrl(video);
-                
+
                 // Run callEngineVeritone and downloadVideo in parallel
                 const [jobId, tempFile] = await Promise.all([
                     callEngineVeritone(renditionUrl),
@@ -238,9 +245,9 @@ async function main() {
                 console.log("detect segments successfully, start processing video");
                 // const tempFile = './test.mov';
                 await processVideoFromUrl(video, tempFile);
-                // if (fs.existsSync(tempFile)) {
-                //     fs.unlinkSync(tempFile);
-                // }
+                if (fs.existsSync(tempFile)) {
+                    fs.unlinkSync(tempFile);
+                }
                 await prisma.video.update({
                     where: { videoID: video.videoID },
                     data: { status: VideoStatus.COMPLETED, updatedAt: new Date() },
