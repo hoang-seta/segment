@@ -15,7 +15,6 @@ datasource db {
 
 model Video {
   videoID           String      @id
-  url               String      @unique
   ingestDate        String
   resourceName      String
   owner             String
@@ -30,14 +29,15 @@ model Video {
 }
 
 model Clip {
-  id        BigInt   @id @default(autoincrement())
-  videoID   String
-  clipPath  String?
-  xmlPath   String?
-  startTime String
-  endTime   String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           BigInt   @id @default(autoincrement())
+  videoID      String
+  clipPath     String?
+  xmlPath      String?
+  driveClipUrl String?
+  startTime    String
+  endTime      String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }
 
 enum VideoStatus {

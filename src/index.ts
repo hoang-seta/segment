@@ -1,13 +1,14 @@
 import { Clip, Video, VideoStatus } from '@prisma/client';
 import axios from 'axios';
+import { execFile } from 'child_process';
 import 'dotenv/config';
 import ffmpeg from 'fluent-ffmpeg';
 import fs from 'fs';
+import { promisify } from 'util';
 import { uploadClipToMinIO } from './lib/minio';
 import prisma from './lib/prisma';
-import { execFile } from 'child_process';
-import { promisify } from 'util';
 import { uploadClipToDrive } from './lib/drive';
+import { runClippingSegmentVideo, getJobStatus } from './lib/veritone';
 
 const execFileAsync = promisify(execFile);
 
@@ -103,29 +104,29 @@ async function cutVideo(inputFile: string, clip: Clip): Promise<string> {
 
 async function probeVideo(filePath: string): Promise<{ resolution: string, fps: number }> {
     const args = [
-      '-v', 'error',
-      '-select_streams', 'v:0',
-      '-show_entries', 'stream=width,height,avg_frame_rate',
-      '-of', 'json',
-      filePath,
+        '-v', 'error',
+        '-select_streams', 'v:0',
+        '-show_entries', 'stream=width,height,avg_frame_rate',
+        '-of', 'json',
+        filePath,
     ];
-  
+
     const { stdout } = await execFileAsync('ffprobe', args);
     const data = JSON.parse(stdout);
-  
+
     if (!data.streams?.length) {
-      throw new Error('No video stream found in file');
+        throw new Error('No video stream found in file');
     }
-  
+
     const stream = data.streams[0];
     const [num, den] = stream.avg_frame_rate.split('/').map(Number);
     const fps = den ? num / den : num;
-  
+
     const resolution = `${stream.width}x${stream.height}`;
     return { resolution, fps };
-  } 
+}
 
-async function createXMLFile(video: Video,tempFile: string, clip: Clip): Promise<string> {
+async function createXMLFile(video: Video, tempFile: string, clip: Clip): Promise<string> {
     const startTime = clip.startTime.split(':').map(Number);
     const endTime = clip.endTime.split(':').map(Number);
     const duration = (endTime[0]! * 3600 + endTime[1]! * 60 + endTime[2]!) - (startTime[0]! * 3600 + startTime[1]! * 60 + startTime[2]!);
@@ -161,7 +162,7 @@ async function getVideoWaiting(): Promise<Video | null> {
         });
         if (video) {
             await tx.video.update({
-                where: { url: video.url },
+                where: { videoID: video.videoID },
                 data: { status: VideoStatus.PROCESSING, updatedAt: new Date() },
             });
             return video;
@@ -170,11 +171,21 @@ async function getVideoWaiting(): Promise<Video | null> {
     });
 }
 
-async function downloadVideo(video: Video): Promise<string> {
+async function getRenditionUrl(video: Video): Promise<string> {
+    const videoResponse = await axios.get(`https://crxextapi.pd.dmh.veritone.com/assets-api/v1/renditionUrl/${video.videoID}?scheme=https&context=browser&api_key=c24b9617-e4ad-4466-89d7-8902d7d7dd15`);
+    const data = videoResponse.data;
+    const renditionUrl = data.renditionInfoList.find((item: any) => item.purpose === 'c')?.url;
+    if (!renditionUrl) {
+        throw new Error(`No url found for clipId: ${video.videoID}`);
+    }
+    return renditionUrl;
+}
+
+async function downloadVideo(video: Video, renditionUrl: string): Promise<string> {
     // download the video from the url
     // set the name file with clipid is the name of the file
     const fileName = `${video.videoID}.mp4`;
-    const response = await axios.get(video.url, { responseType: 'stream' });
+    const response = await axios.get(renditionUrl, { responseType: 'stream' });
     const writer = fs.createWriteStream(fileName);
     response.data.pipe(writer);
     await new Promise<void>((resolve, reject) => {
@@ -185,25 +196,59 @@ async function downloadVideo(video: Video): Promise<string> {
     return fileName;
 }
 
+async function callEngineVeritone(renditionUrl: string): Promise<string> {
+    const jobId = await runClippingSegmentVideo(renditionUrl);
+    if (jobId) {
+        return jobId;
+    }
+    return '';
+}
+
 async function main() {
     while (true) {
         const video = await getVideoWaiting()
         if (video) {
             try {
-                const tempFile = await downloadVideo(video);
+                console.log("Start processing video: ", video.videoID);
+                // Get rendition URL once
+                const renditionUrl = await getRenditionUrl(video);
+                
+                // Run callEngineVeritone and downloadVideo in parallel
+                const [jobId, tempFile] = await Promise.all([
+                    callEngineVeritone(renditionUrl),
+                    downloadVideo(video, renditionUrl)
+                ]);
+                console.log("called engine veritone and download video successfully");
+                if (!jobId) {
+                    throw new Error('Job ID not found');
+                }
+                // const jobId = '25104217_AJhL3a5q7a'
+                // const tempFile = './61701414.mp4';
+                while (true) {
+                    const { startAndEndTime, isCompleted } = await getJobStatus(jobId);
+                    if (isCompleted) {
+                        for (const startTime of startAndEndTime) {
+                            await insertClip(video, startTime.startTimeMs, startTime.stopTimeMs);
+                        }
+                        break;
+                    }
+                    console.log('Sleeping for 1 minute, wait job id: ', jobId);
+                    await new Promise(resolve => setTimeout(resolve, 1000 * 30));
+                }
+                console.log("detect segments successfully, start processing video");
                 // const tempFile = './test.mov';
                 await processVideoFromUrl(video, tempFile);
-                if (fs.existsSync(tempFile)) {
-                    fs.unlinkSync(tempFile);
-                }
+                // if (fs.existsSync(tempFile)) {
+                //     fs.unlinkSync(tempFile);
+                // }
                 await prisma.video.update({
-                    where: { url: video.url },
+                    where: { videoID: video.videoID },
                     data: { status: VideoStatus.COMPLETED, updatedAt: new Date() },
                 });
             } catch (error) {
-                console.error(`Error processing video ${video.url}:`, error);
+                console.error(`Error processing video ${video.videoID}:`, error);
                 await prisma.video.update({
-                    where: { url: video.url },
+                    where: { videoID: video.videoID },
                     data: {
                         error: error instanceof Error ? error.message : 'Unknown error',
                         status: VideoStatus.FAILED,
@@ -218,34 +263,24 @@ async function main() {
 }
 
 
-interface ClipTime {
-    startTime: string;
-    endTime: string;
-}
-async function insertClip(videoID: string, clips: ClipTime[]) {
-    prisma.$transaction(async (tx) => {
-        const video = await prisma.video.findFirst({
-            where: {
-                videoID: videoID,
-            },
-        });
-        if (!video) {
-            throw new Error(`Video not found for videoID: ${videoID}`);
-        }
-        await tx.video.update({
-            where: { videoID: videoID },
-            data: { status: VideoStatus.READY, updatedAt: new Date() },
-        });
-
-        for (const clipTime of clips) {
-            await tx.clip.create({
-                data: {
-                    videoID: video.videoID,
-                    startTime: clipTime.startTime,
-                    endTime: clipTime.endTime,
-                },
-            });
-        }
+async function insertClip(video: Video, startTime: number, endTime: number) {
+    const startTimeSeconds = startTime / 1000;
+    const endTimeSeconds = endTime / 1000;
+    const startTimeHour = Math.floor(startTimeSeconds / 3600).toString().padStart(2, '0');
+    const startTimeMinute = Math.floor((startTimeSeconds % 3600) / 60).toString().padStart(2, '0');
+    const startTimeSecond = Math.floor(startTimeSeconds % 60).toString().padStart(2, '0');
+    const endTimeHour = Math.floor(endTimeSeconds / 3600).toString().padStart(2, '0');
+    const endTimeMinute = Math.floor((endTimeSeconds % 3600) / 60).toString().padStart(2, '0');
+    const endTimeSecond = Math.floor(endTimeSeconds % 60).toString().padStart(2, '0');
+    const startTimeString = `${startTimeHour}:${startTimeMinute}:${startTimeSecond}`;
+    const endTimeString = `${endTimeHour}:${endTimeMinute}:${endTimeSecond}`;
+    console.log(`Inserting clip ${startTimeString} to ${endTimeString}`);
+    await prisma.clip.create({
+        data: {
+            videoID: video.videoID,
+            startTime: startTimeString,
+            endTime: endTimeString,
+        },
     });
 }
 
