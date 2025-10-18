@@ -38,13 +38,13 @@ async function processVideoFromUrl(video: Video, tempFile: string): Promise<void
     for (const clip of clips) {
         const clipPath = await cutVideo(tempFile, clip);
 
-        await uploadClipToDrive(video.videoID, clipPath);
-        // if (driveClipUrl !== 'file not found') {
-        //     await prisma.clip.update({
-        //         where: { id: clip.id },
-        //         data: { driveClipUrl: driveClipUrl },
-        //     });
-        // }
+        const driveClipUrl = await uploadClipToDrive(video.videoID, clipPath);
+        if (driveClipUrl !== 'file not found') {
+            await prisma.clip.update({
+                where: { id: clip.id },
+                data: { driveClipUrl: driveClipUrl },
+            });
+        }
 
         // const uploadedUrl = await uploadClipToMinIO(tempFile, clipPath);
         // if (uploadedUrl !== 'file not found') {
