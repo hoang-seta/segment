@@ -1,7 +1,7 @@
 import fetch from "node-fetch";
 
 const GRAPHQL_ENDPOINT = "https://api.stage.us-1.veritone.com/v3/graphql";
-const API_TOKEN = "86bc9851-7e36-4c3d-af45-85c37e5c4743" // set your token via env
+const API_TOKEN = process.env['VERITONE_TOKEN'] as string;
 
 interface GraphQLResponse {
     data?: {
