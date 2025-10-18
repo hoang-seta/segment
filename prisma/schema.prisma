@@ -15,6 +15,7 @@ datasource db {
 
 model Video {
   videoID           String      @id
+  jobID             String?
   ingestDate        String
   resourceName      String
   owner             String
@@ -39,6 +40,8 @@ model Clip {
   isPassed          Boolean?
   qaCompletedAt     DateTime?
   qaComment    String?
+  qaLockedBy   String?
+  qaLockedAt   DateTime?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 }

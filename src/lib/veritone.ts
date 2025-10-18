@@ -1,7 +1,7 @@
 import fetch from "node-fetch";
 
-const GRAPHQL_ENDPOINT = "https://api.stage.us-1.veritone.com/v3/graphql";
-const API_TOKEN = "86bc9851-7e36-4c3d-af45-85c37e5c4743" // set your token via env
+const GRAPHQL_ENDPOINT = "https://api.us-1.veritone.com/v3/graphql";
+const API_TOKEN = "cd3814a1-9de7-44f1-b5bc-838664a22a24" // set your token via env //THIS IS PROD TOKEN
 
 interface GraphQLResponse {
     data?: {
@@ -20,6 +20,7 @@ async function runClippingSegmentVideo(url: string): Promise<string> {
     createJob(
       input: {
         target: { status: "downloaded" }
+        clusterId: "prd5-21xbyq0x-4h0s-o685-snas-oovhdai552v9"
         tasks: [
           {
             engineId: "9e611ad7-2d3b-48f6-a51b-0a1ba40fe255"

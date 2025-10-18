@@ -226,6 +226,12 @@ async function main() {
                     downloadVideo(video, renditionUrl)
                 ]);
                 console.log("called engine veritone and download video successfully");
+
+                await prisma.video.update({
+                    where: { videoID: video.videoID },
+                    data: { jobID: jobId, updatedAt: new Date() },
+                });
+
                 if (!jobId) {
                     throw new Error('Job ID not found');
                 }
