@@ -72,7 +72,7 @@ async function getOrCreateFolder(folderName: string, parentFolderId?: string): P
 async function uploadFileToDrive(
     filePath: string,
     folderId: string
-): Promise<{ fileId: string; webViewLink: string }> {
+): Promise<{ fileId: string; webViewLink: string; fileUrl: string }> {
     const auth = await getAuthClient();
     const drive = google.drive({ version: 'v3', auth: auth });
 
@@ -102,9 +102,13 @@ async function uploadFileToDrive(
         throw new Error(`Failed to upload file: ${fileName}`);
     }
 
-    console.log(`Uploaded ${fileName} - File ID: ${fileId}`);
+    // Create the file URL for embedding/viewing
+    const fileUrl = `https://drive.google.com/file/d/${fileId}/view`;
 
-    return { fileId, webViewLink };
+    console.log(`Uploaded ${fileName} - File ID: ${fileId}`);
+    console.log(`File URL: ${fileUrl}`);
+
+    return { fileId, webViewLink, fileUrl };
 }
 
 export async function uploadClipToDrive(videoID: string, clipPath: string): Promise<string> {
@@ -114,9 +118,9 @@ export async function uploadClipToDrive(videoID: string, clipPath: string): Prom
         }
         
         const folderId = await getOrCreateFolder(videoID, PARENT_FOLDER_ID);
-        const { webViewLink } = await uploadFileToDrive(clipPath, folderId);
+        const { fileUrl } = await uploadFileToDrive(clipPath, folderId);
 
-        return webViewLink;
+        return fileUrl;
     } catch (error) {
         console.error(`Error uploading clip to Drive:`, error);
         throw error;

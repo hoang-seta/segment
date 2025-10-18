@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "Clip" ALTER COLUMN "isPassed" DROP DEFAULT;
