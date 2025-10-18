@@ -23,66 +23,53 @@
             padding: 20px;
         }
 
-        /* Email Modal Styles */
-        .email-modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.7);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-        }
-        
-        .email-modal-content {
+        /* Login Screen Styles */
+        .login-container {
+            max-width: 500px;
+            margin: 100px auto;
             background: white;
             padding: 40px;
             border-radius: 12px;
-            max-width: 450px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
             text-align: center;
         }
-        
-        .email-modal h2 {
+
+        .login-container h1 {
             margin-bottom: 20px;
             color: #2c3e50;
         }
-        
-        .email-modal p {
-            margin-bottom: 25px;
+
+        .login-container p {
+            margin-bottom: 30px;
             color: #7f8c8d;
+            line-height: 1.6;
         }
-        
-        .email-input {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #e0e0e0;
+
+        .google-signin-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 28px;
+            background: white;
+            color: #444;
+            border: 2px solid #ddd;
             border-radius: 6px;
-            font-size: 1em;
-            margin-bottom: 20px;
-        }
-        
-        .email-input:focus {
-            outline: none;
-            border-color: #3498db;
-        }
-        
-        .btn-submit-email {
-            width: 100%;
-            padding: 14px;
-            background: #3498db;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            font-size: 1.1em;
+            font-size: 16px;
+            font-weight: 600;
             cursor: pointer;
-            transition: background 0.3s;
+            transition: all 0.3s;
+            text-decoration: none;
         }
-        
-        .btn-submit-email:hover {
-            background: #2980b9;
+
+        .google-signin-btn:hover {
+            background: #f8f9fa;
+            border-color: #4285f4;
+            box-shadow: 0 2px 8px rgba(66,133,244,0.2);
+        }
+
+        .google-icon {
+            width: 24px;
+            height: 24px;
         }
 
         /* Header Styles */
@@ -94,35 +81,57 @@
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
 
-        .user-badge {
-            background: #e7f3ff;
-            padding: 8px 15px;
-            border-radius: 6px;
-            display: inline-flex;
+        .user-bar {
+            display: flex;
+            justify-content: space-between;
             align-items: center;
-            gap: 8px;
-            margin-bottom: 15px;
-        }
-        
-        .user-email-display {
-            font-weight: 600;
-            color: #0066cc;
-        }
-        
-        .btn-change-email {
-            background: transparent;
-            border: 1px solid #0066cc;
-            color: #0066cc;
-            padding: 4px 12px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 0.85em;
-            transition: all 0.3s;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 6px;
         }
 
-        .btn-change-email:hover {
-            background: #0066cc;
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 2px solid #e0e0e0;
+        }
+
+        .user-details {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .user-name {
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .user-email {
+            font-size: 0.85em;
+            color: #7f8c8d;
+        }
+
+        .logout-btn {
+            padding: 8px 20px;
+            background: #e74c3c;
             color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.3s;
+            font-weight: 600;
+        }
+
+        .logout-btn:hover {
+            background: #c0392b;
         }
 
         h1 {
@@ -213,7 +222,7 @@
             border-radius: 8px;
             margin-bottom: 20px;
             position: relative;
-            padding-bottom: 56.25%; /* 16:9 aspect ratio */
+            padding-bottom: 56.25%;
             overflow: hidden;
         }
 
@@ -389,6 +398,16 @@
             background: #3367d6;
         }
 
+        .locked-badge {
+            display: inline-block;
+            background: #27ae60;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            margin-left: 10px;
+        }
+
         /* Utility */
         .hidden {
             display: none !important;
@@ -396,27 +415,33 @@
     </style>
 </head>
 <body>
-    <!-- Email Modal -->
-    <div id="email-modal" class="email-modal">
-        <div class="email-modal-content">
-            <h2>🎬 QA Dashboard</h2>
-            <p>Enter your email to start QA review.<br>You must have Google Drive access to view clips.</p>
-            <input type="email" 
-                   id="email-input" 
-                   class="email-input" 
-                   placeholder="your.email@company.com"
-                   autocomplete="email">
-            <button class="btn-submit-email" onclick="saveEmail()">Continue</button>
-        </div>
+    <!-- Login Screen -->
+    <div id="login-screen" class="login-container hidden">
+        <h1>🎬 Video Clips QA Dashboard</h1>
+        <p>Sign in with your Google account to access the QA dashboard.<br>You must have permission to view the clips on Google Drive.</p>
+        <a href="/auth/google" class="google-signin-btn">
+            <svg class="google-icon" viewBox="0 0 24 24">
+                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+            </svg>
+            Sign in with Google
+        </a>
     </div>
 
     <!-- Main Dashboard -->
     <div id="dashboard" class="container hidden">
         <header>
-            <div class="user-badge">
-                <span>👤</span>
-                <span class="user-email-display" id="user-email-display"></span>
-                <button class="btn-change-email" onclick="changeEmail()">Change</button>
+            <div class="user-bar">
+                <div class="user-info">
+                    <img id="user-avatar" class="user-avatar" src="" alt="User">
+                    <div class="user-details">
+                        <div class="user-name" id="user-name">Loading...</div>
+                        <div class="user-email" id="user-email"></div>
+                    </div>
+                </div>
+                <button class="logout-btn" onclick="logout()">Logout</button>
             </div>
 
             <h1>🎬 Video Clips QA Dashboard</h1>
@@ -472,67 +497,60 @@
 
     <script>
         let currentClip = null;
-        let qaEmail = localStorage.getItem('qa-email');
+        let currentUser = null;
 
-        function showEmailModal() {
-            document.getElementById('email-modal').classList.remove('hidden');
-            document.getElementById('dashboard').classList.add('hidden');
-            document.getElementById('email-input').focus();
+        async function checkAuth() {
+            try {
+                const response = await fetch('/auth/user');
+                const data = await response.json();
+                
+                if (data.user) {
+                    currentUser = data.user;
+                    showDashboard();
+                    return true;
+                } else {
+                    showLogin();
+                    return false;
+                }
+            } catch (error) {
+                console.error('Error checking auth:', error);
+                showLogin();
+                return false;
+            }
         }
 
-        function saveEmail() {
-            const input = document.getElementById('email-input');
-            const email = input.value.trim();
-            
-            if (!email || !email.includes('@')) {
-                alert('Please enter a valid email address');
-                return;
-            }
-            
-            qaEmail = email;
-            localStorage.setItem('qa-email', email);
-            
-            document.getElementById('email-modal').classList.add('hidden');
+        function showLogin() {
+            document.getElementById('login-screen').classList.remove('hidden');
+            document.getElementById('dashboard').classList.add('hidden');
+        }
+
+        function showDashboard() {
+            document.getElementById('login-screen').classList.add('hidden');
             document.getElementById('dashboard').classList.remove('hidden');
-            document.getElementById('user-email-display').textContent = email;
             
+            // Update user info
+            document.getElementById('user-name').textContent = currentUser.name;
+            document.getElementById('user-email').textContent = currentUser.email;
+            document.getElementById('user-avatar').src = currentUser.picture || '';
+            
+            // Load data
             fetchStats();
             navigateClip('next');
         }
 
-        function changeEmail() {
-            showEmailModal();
-            document.getElementById('email-input').value = qaEmail || '';
-        }
-
-        async function apiRequest(url, options = {}) {
-            if (!qaEmail) {
-                showEmailModal();
-                throw new Error('Email required');
-            }
-            
-            const headers = {
-                'Content-Type': 'application/json',
-                'x-qa-email': qaEmail,
-                ...options.headers,
-            };
-            
-            const response = await fetch(url, { ...options, headers });
-            
-            if (response.status === 401) {
-                showEmailModal();
-                throw new Error('Email required');
-            }
-            
-            return response;
+        function logout() {
+            window.location.href = '/auth/logout';
         }
 
         async function fetchStats() {
             try {
-                const response = await apiRequest('/api/clips/stats');
-                const stats = await response.json();
+                const response = await fetch('/api/clips/stats');
+                if (response.status === 401) {
+                    showLogin();
+                    return;
+                }
                 
-                console.log('📊 Stats:', stats);
+                const stats = await response.json();
                 
                 document.getElementById('stat-total').textContent = stats.total;
                 document.getElementById('stat-uploaded').textContent = stats.uploaded;
@@ -550,25 +568,28 @@
             container.innerHTML = '<div class="loading">⏳ Loading clip...</div>';
             
             try {
-                const response = await apiRequest('/api/clips/navigate', {
+                const body = {
+                    currentId: currentClip ? currentClip.id : null,
+                    direction,
+                };
+                
+                const response = await fetch('/api/clips/navigate', {
                     method: 'POST',
-                    body: JSON.stringify({
-                        currentId: currentClip ? currentClip.id : null,
-                        direction,
-                    }),
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body),
                 });
                 
-                const data = await response.json();
-                
-                console.log('📦 Response data:', data);
-                
-                if (!data.clip) {
-                    console.log('❌ No clip found');
-                    container.innerHTML = '<div class="no-clip">✅ No clips pending QA. Great job!</div>';
+                if (response.status === 401) {
+                    showLogin();
                     return;
                 }
                 
-                console.log('✅ Clip found:', data.clip);
+                const data = await response.json();
+                
+                if (!data.clip) {
+                    container.innerHTML = '<div class="no-clip">✅ No clips available for QA. Great job!</div>';
+                    return;
+                }
                 
                 currentClip = data.clip;
                 displayClip(data.clip, data.video);
@@ -580,12 +601,7 @@
         }
 
         function getGoogleDriveEmbedUrl(driveUrl) {
-            console.log('🔗 Original URL:', driveUrl);
-            
-            if (!driveUrl) {
-                console.error('❌ No Drive URL provided');
-                return null;
-            }
+            if (!driveUrl) return null;
             
             const patterns = [
                 /\/file\/d\/([^\/\?]+)/,
@@ -596,25 +612,18 @@
             for (const pattern of patterns) {
                 const match = driveUrl.match(pattern);
                 if (match && match[1]) {
-                    const fileId = match[1];
-                    const embedUrl = `https://drive.google.com/file/d/${fileId}/preview`;
-                    console.log('✅ Embed URL:', embedUrl);
-                    return embedUrl;
+                    return `https://drive.google.com/file/d/${match[1]}/preview`;
                 }
             }
             
-            console.error('❌ Could not extract file ID from URL');
             return driveUrl;
         }
 
         function displayClip(clip, video) {
-            console.log('🎬 Displaying clip:', clip.id);
-            
             const container = document.getElementById('clip-container');
             document.getElementById('clip-counter').textContent = `Clip ID: #${clip.id}`;
             
             if (!clip.driveClipUrl) {
-                console.error('❌ No driveClipUrl in clip');
                 container.innerHTML = '<div class="error">❌ Clip has no Drive URL</div>';
                 return;
             }
@@ -643,11 +652,24 @@
                     <span class="info-label">Resource:</span>
                     <span>${video.resourceName}</span>
                 </div>
-                <div class="info-row">
-                    <span class="info-label">Status:</span>
-                    <span>${video.status}</span>
-                </div>
             ` : '<p>Video information not available</p>';
+
+            function calculateDuration(startTime, endTime) {
+                const start = startTime.split(':').map(Number);
+                const end = endTime.split(':').map(Number);
+                
+                const startSec = start[0] * 3600 + start[1] * 60 + start[2];
+                const endSec = end[0] * 3600 + end[1] * 60 + end[2];
+                const duration = endSec - startSec;
+                
+                const hours = Math.floor(duration / 3600);
+                const minutes = Math.floor((duration % 3600) / 60);
+                const seconds = duration % 60;
+                
+                if (hours > 0) return `${hours}h ${minutes}m ${seconds}s`;
+                else if (minutes > 0) return `${minutes}m ${seconds}s`;
+                else return `${seconds}s`;
+            }
             
             container.innerHTML = `
                 <div class="video-player-section">
@@ -656,7 +678,7 @@
                 
                 <div class="clip-info-grid">
                     <div class="clip-info">
-                        <h3>📹 Clip Information</h3>
+                        <h3>📹 Clip Information <span class="locked-badge">🔒 Locked by You</span></h3>
                         <div class="info-row">
                             <span class="info-label">Clip ID:</span>
                             <span>#${clip.id}</span>
@@ -698,29 +720,6 @@
                     <button class="btn btn-fail" onclick="submitQA(false)">❌ Fail QA</button>
                 </div>
             `;
-            
-            console.log('✅ Clip displayed successfully');
-        }
-
-        function calculateDuration(startTime, endTime) {
-            const start = startTime.split(':').map(Number);
-            const end = endTime.split(':').map(Number);
-            
-            const startSec = start[0] * 3600 + start[1] * 60 + start[2];
-            const endSec = end[0] * 3600 + end[1] * 60 + end[2];
-            const duration = endSec - startSec;
-            
-            const hours = Math.floor(duration / 3600);
-            const minutes = Math.floor((duration % 3600) / 60);
-            const seconds = duration % 60;
-            
-            if (hours > 0) {
-                return `${hours}h ${minutes}m ${seconds}s`;
-            } else if (minutes > 0) {
-                return `${minutes}m ${seconds}s`;
-            } else {
-                return `${seconds}s`;
-            }
         }
 
         async function submitQA(isPassed) {
@@ -734,10 +733,16 @@
             showMessage('Submitting QA result...', 'info');
             
             try {
-                const response = await apiRequest(`/api/clips/${currentClip.id}/qa`, {
+                const response = await fetch(`/api/clips/${currentClip.id}/qa`, {
                     method: 'POST',
-                    body: JSON.stringify({ isPassed, comment }),
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ isPassed, comment })
                 });
+                
+                if (response.status === 401) {
+                    showLogin();
+                    return;
+                }
                 
                 if (response.ok) {
                     showMessage(`✅ Clip marked as ${isPassed ? 'PASSED' : 'FAILED'}. Loading next clip...`, 'success');
@@ -753,13 +758,11 @@
             } catch (error) {
                 showMessage(`❌ ${error.message}`, 'error');
                 buttons.forEach(btn => btn.disabled = false);
-                console.error('Error:', error);
             }
         }
 
         function showMessage(text, type) {
-            const messageDiv = document.getElementById('message');
-            messageDiv.innerHTML = `<div class="${type}">${text}</div>`;
+            document.getElementById('message').innerHTML = `<div class="${type}">${text}</div>`;
         }
 
         function clearMessage() {
@@ -768,36 +771,18 @@
 
         // Keyboard shortcuts
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'ArrowLeft') {
-                navigateClip('prev');
-            } else if (e.key === 'ArrowRight') {
-                navigateClip('next');
-            }
+            if (e.key === 'ArrowLeft') navigateClip('prev');
+            else if (e.key === 'ArrowRight') navigateClip('next');
         });
 
-        // Enter key to submit email
-        document.getElementById('email-input').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') saveEmail();
-        });
-
-        // Auto-refresh stats every 30 seconds
+        // Auto-refresh stats
         setInterval(() => {
-            if (qaEmail && !document.getElementById('email-modal').classList.contains('hidden')) {
-                fetchStats();
-            }
+            if (currentUser) fetchStats();
         }, 30000);
 
-        // Initial load
+        // Initialize
         console.log('🚀 Initializing QA Dashboard...');
-        if (qaEmail) {
-            document.getElementById('user-email-display').textContent = qaEmail;
-            document.getElementById('email-modal').classList.add('hidden');
-            document.getElementById('dashboard').classList.remove('hidden');
-            fetchStats();
-            navigateClip('next');
-        } else {
-            showEmailModal();
-        }
+        checkAuth();
     </script>
 </body>
 </html>
