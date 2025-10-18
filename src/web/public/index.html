@@ -141,7 +141,7 @@
 
         .stats {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
             gap: 15px;
             margin-top: 20px;
         }
@@ -151,6 +151,19 @@
             padding: 15px;
             border-radius: 6px;
             text-align: center;
+        }
+
+        .stat-card.success-rate {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .stat-card.success-rate .stat-value {
+            color: white;
+        }
+
+        .stat-card.success-rate .stat-label {
+            color: rgba(255,255,255,0.9);
         }
 
         .stat-value {
@@ -214,6 +227,32 @@
         .clip-counter {
             font-weight: 600;
             color: #2c3e50;
+        }
+
+        /* Skip Alert Banner */
+        .skip-alert {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px 20px;
+            margin-bottom: 20px;
+            border-radius: 6px;
+        }
+
+        .skip-alert h4 {
+            color: #856404;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .skip-alert p {
+            color: #856404;
+            margin: 5px 0;
+        }
+
+        .skip-alert-label {
+            font-weight: 600;
         }
 
         /* Video Player Styles */
@@ -337,6 +376,17 @@
             box-shadow: 0 4px 8px rgba(231, 76, 60, 0.3);
         }
 
+        .btn-skip {
+            background: #f39c12;
+            color: white;
+        }
+
+        .btn-skip:hover:not(:disabled) {
+            background: #e67e22;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(243, 156, 18, 0.3);
+        }
+
         .btn:disabled {
             opacity: 0.5;
             cursor: not-allowed;
@@ -408,6 +458,101 @@
             margin-left: 10px;
         }
 
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            animation: fadeIn 0.3s;
+        }
+
+        .modal.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background-color: white;
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            animation: slideIn 0.3s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideIn {
+            from { transform: translateY(-50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .modal-content h3 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+        }
+
+        .modal-content textarea {
+            width: 100%;
+            min-height: 120px;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: 0.95em;
+            resize: vertical;
+            margin-bottom: 20px;
+        }
+
+        .modal-content textarea:focus {
+            outline: none;
+            border-color: #f39c12;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .btn-cancel {
+            padding: 10px 24px;
+            background: #95a5a6;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .btn-cancel:hover {
+            background: #7f8c8d;
+        }
+
+        .btn-confirm-skip {
+            padding: 10px 24px;
+            background: #f39c12;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .btn-confirm-skip:hover {
+            background: #e67e22;
+        }
+
         /* Utility */
         .hidden {
             display: none !important;
@@ -470,6 +615,14 @@
                     <div class="stat-value" id="stat-failed">-</div>
                     <div class="stat-label">Failed</div>
                 </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="stat-skipped">-</div>
+                    <div class="stat-label">Skipped</div>
+                </div>
+                <div class="stat-card success-rate">
+                    <div class="stat-value" id="stat-success-rate">-%</div>
+                    <div class="stat-label">Success Rate</div>
+                </div>
             </div>
         </header>
 
@@ -491,6 +644,19 @@
             <div id="message"></div>
             <div id="clip-container">
                 <div class="loading">⏳ Loading next clip for QA...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Skip Modal -->
+    <div id="skip-modal" class="modal">
+        <div class="modal-content">
+            <h3>⏭️ Skip This Clip</h3>
+            <p style="color: #7f8c8d; margin-bottom: 15px;">Please explain why you're skipping this clip. This will help the next QA reviewer.</p>
+            <textarea id="skip-reason" placeholder="e.g., Video quality is too poor, audio is corrupted, clip is too complex to review quickly, etc."></textarea>
+            <div class="modal-actions">
+                <button class="btn-cancel" onclick="closeSkipModal()">Cancel</button>
+                <button class="btn-confirm-skip" onclick="confirmSkip()">Skip Clip</button>
             </div>
         </div>
     </div>
@@ -528,12 +694,10 @@
             document.getElementById('login-screen').classList.add('hidden');
             document.getElementById('dashboard').classList.remove('hidden');
             
-            // Update user info
             document.getElementById('user-name').textContent = currentUser.name;
             document.getElementById('user-email').textContent = currentUser.email;
             document.getElementById('user-avatar').src = currentUser.picture || '';
             
-            // Load data
             fetchStats();
             navigateClip('next');
         }
@@ -558,6 +722,8 @@
                 document.getElementById('stat-locked').textContent = stats.locked || 0;
                 document.getElementById('stat-passed').textContent = stats.passed;
                 document.getElementById('stat-failed').textContent = stats.failed;
+                document.getElementById('stat-skipped').textContent = stats.skipped || 0;
+                document.getElementById('stat-success-rate').textContent = stats.successRate + '%';
             } catch (error) {
                 console.error('Error fetching stats:', error);
             }
@@ -634,6 +800,19 @@
                 container.innerHTML = '<div class="error">❌ Invalid Drive URL format</div>';
                 return;
             }
+
+            // Show skip alert if clip was previously skipped
+            let skipAlertHtml = '';
+            if (clip.isSkipped && clip.skipReason) {
+                skipAlertHtml = `
+                    <div class="skip-alert">
+                        <h4>⚠️ Previous Skip Notice</h4>
+                        <p><span class="skip-alert-label">Skipped by:</span> ${clip.skippedBy || 'Unknown'}</p>
+                        <p><span class="skip-alert-label">When:</span> ${clip.skippedAt ? new Date(clip.skippedAt).toLocaleString() : 'Unknown'}</p>
+                        <p><span class="skip-alert-label">Reason:</span> ${clip.skipReason}</p>
+                    </div>
+                `;
+            }
             
             const videoInfoHtml = video ? `
                 <div class="info-row">
@@ -672,6 +851,8 @@
             }
             
             container.innerHTML = `
+                ${skipAlertHtml}
+
                 <div class="video-player-section">
                     <iframe src="${embedUrl}" allow="autoplay" allowfullscreen></iframe>
                 </div>
@@ -718,8 +899,65 @@
                 <div class="qa-actions">
                     <button class="btn btn-pass" onclick="submitQA(true)">✅ Pass QA</button>
                     <button class="btn btn-fail" onclick="submitQA(false)">❌ Fail QA</button>
+                    <button class="btn btn-skip" onclick="openSkipModal()">⏭️ Skip</button>
                 </div>
             `;
+        }
+
+        function openSkipModal() {
+            document.getElementById('skip-modal').classList.add('show');
+            document.getElementById('skip-reason').value = '';
+            document.getElementById('skip-reason').focus();
+        }
+
+        function closeSkipModal() {
+            document.getElementById('skip-modal').classList.remove('show');
+        }
+
+        async function confirmSkip() {
+            if (!currentClip) return;
+            
+            const skipReason = document.getElementById('skip-reason').value.trim();
+            
+            if (!skipReason) {
+                alert('Please provide a reason for skipping this clip.');
+                return;
+            }
+
+            closeSkipModal();
+            
+            const buttons = document.querySelectorAll('.btn');
+            buttons.forEach(btn => btn.disabled = true);
+            
+            showMessage('⏭️ Skipping clip...', 'info');
+            
+            try {
+                const response = await fetch(`/api/clips/${currentClip.id}/skip`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ skipReason })
+                });
+                
+                if (response.status === 401) {
+                    showLogin();
+                    return;
+                }
+                
+                if (response.ok) {
+                    showMessage('✅ Clip skipped and unlocked. Loading next clip...', 'success');
+                    await fetchStats();
+                    setTimeout(() => {
+                        navigateClip('next');
+                        clearMessage();
+                    }, 1500);
+                } else {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Failed to skip clip');
+                }
+            } catch (error) {
+                showMessage(`❌ ${error.message}`, 'error');
+                buttons.forEach(btn => btn.disabled = false);
+            }
         }
 
         async function submitQA(isPassed) {
@@ -773,6 +1011,12 @@
         document.addEventListener('keydown', (e) => {
             if (e.key === 'ArrowLeft') navigateClip('prev');
             else if (e.key === 'ArrowRight') navigateClip('next');
+            else if (e.key === 'Escape') closeSkipModal();
+        });
+
+        // Close modal on background click
+        document.getElementById('skip-modal').addEventListener('click', (e) => {
+            if (e.target.id === 'skip-modal') closeSkipModal();
         });
 
         // Auto-refresh stats

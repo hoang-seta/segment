@@ -7,6 +7,7 @@ import prisma from '../lib/prisma';
 
 const app = express();
 const PORT = process.env['PORT'] || 3000;
+const PUBLIC_URL = process.env['PUBLIC_URL'] || `http://localhost:${PORT}`;
 
 const LOCK_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
 
@@ -16,8 +17,8 @@ app.use(session({
     resave: false,
     saveUninitialized: false,
     cookie: {
-        maxAge: 24 * 60 * 60 * 1000, // 24 hours
-        secure: process.env['NODE_ENV'] === 'production', // true in production with HTTPS
+        maxAge: 24 * 60 * 60 * 1000,
+        secure: process.env['NODE_ENV'] === 'production',
     }
 }));
 
@@ -31,7 +32,7 @@ app.use(passport.session());
 passport.use(new GoogleStrategy({
     clientID: process.env['GOOGLE_CLIENT_ID'] || '',
     clientSecret: process.env['GOOGLE_CLIENT_SECRET'] || '',
-    callbackURL: '/auth/google/callback',
+    callbackURL: `${PUBLIC_URL}/auth/google/callback`,
 }, (accessToken, refreshToken, profile, done) => {
     const user = {
         id: profile.id,
@@ -53,6 +54,7 @@ passport.deserializeUser((user: any, done) => {
 function serializeBigInt(obj: any): any {
     if (obj === null || obj === undefined) return obj;
     if (typeof obj === 'bigint') return obj.toString();
+    if (obj instanceof Date) return obj.toISOString();
     if (Array.isArray(obj)) return obj.map(serializeBigInt);
     if (typeof obj === 'object') {
         const serialized: any = {};
@@ -98,7 +100,7 @@ app.get('/auth/user', (req: Request, res: Response) => {
     }
 });
 
-// API Routes (all require authentication)
+// API Routes
 
 app.post('/api/clips/navigate', ensureAuthenticated, async (req: Request, res: Response): Promise<void> => {
     try {
@@ -257,6 +259,48 @@ app.post('/api/clips/navigate', ensureAuthenticated, async (req: Request, res: R
     }
 });
 
+app.post('/api/clips/:clipId/skip', ensureAuthenticated, async (req: Request, res: Response): Promise<void> => {
+    try {
+        const user = req.user as any;
+        const qaEmail = user.email;
+        const clipId = parseInt(req.params['clipId'] as string);
+        const { skipReason } = req.body;
+
+        if (isNaN(clipId) || !skipReason || skipReason.trim().length === 0) {
+            res.status(400).json({ error: 'Skip reason is required' });
+            return;
+        }
+
+        const existingClip = await prisma.clip.findUnique({
+            where: { id: BigInt(clipId) },
+        });
+
+        if (existingClip?.qaLockedBy && existingClip.qaLockedBy !== qaEmail) {
+            res.status(403).json({ error: 'This clip is locked by another user' });
+            return;
+        }
+
+        const clip = await prisma.clip.update({
+            where: { id: BigInt(clipId) },
+            data: {
+                isSkipped: true,
+                skipReason: skipReason.trim(),
+                skippedBy: qaEmail,
+                skippedAt: new Date(),
+                qaLockedBy: null,
+                qaLockedAt: null,
+                updatedAt: new Date(),
+            },
+        });
+
+        console.log(`⏭️ Clip ${clipId} skipped by ${qaEmail}: ${skipReason}`);
+        res.json(serializeBigInt({ success: true, clip }));
+    } catch (error) {
+        console.error('Error skipping clip:', error);
+        res.status(500).json({ error: 'Failed to skip clip' });
+    }
+});
+
 app.post('/api/clips/:clipId/unlock', ensureAuthenticated, async (req: Request, res: Response): Promise<void> => {
     try {
         const user = req.user as any;
@@ -287,7 +331,7 @@ app.get('/api/clips/stats', ensureAuthenticated, async (req: Request, res: Respo
         const now = new Date();
         const lockExpiredTime = new Date(now.getTime() - LOCK_TIMEOUT_MS);
 
-        const [total, uploaded, passed, failed, pending, locked] = await Promise.all([
+        const [total, uploaded, passed, failed, pending, locked, skipped] = await Promise.all([
             prisma.clip.count(),
             prisma.clip.count({ where: { driveClipUrl: { not: null } } }),
             prisma.clip.count({ where: { isPassed: true } }),
@@ -296,6 +340,7 @@ app.get('/api/clips/stats', ensureAuthenticated, async (req: Request, res: Respo
                 where: { 
                     driveClipUrl: { not: null },
                     isPassed: null,
+                    isSkipped: false,
                     OR: [
                         { qaLockedBy: null },
                         { qaLockedAt: { lt: lockExpiredTime } },
@@ -309,9 +354,23 @@ app.get('/api/clips/stats', ensureAuthenticated, async (req: Request, res: Respo
                     isPassed: null,
                 },
             }),
+            prisma.clip.count({ where: { isSkipped: true } }),
         ]);
 
-        res.json({ total, uploaded, passed, failed, pending, locked });
+        // Calculate success rate
+        const totalReviewed = passed + failed;
+        const successRate = totalReviewed > 0 ? Math.round((passed / totalReviewed) * 100) : 0;
+
+        res.json({ 
+            total, 
+            uploaded, 
+            passed, 
+            failed, 
+            pending, 
+            locked, 
+            skipped,
+            successRate 
+        });
     } catch (error) {
         console.error('Error fetching stats:', error);
         res.status(500).json({ error: 'Failed to fetch statistics' });
@@ -347,6 +406,8 @@ app.post('/api/clips/:clipId/qa', ensureAuthenticated, async (req: Request, res:
                 qaCompletedAt: new Date(),
                 qaLockedBy: null,
                 qaLockedAt: null,
+                isSkipped: false, // Reset skip if it was previously skipped
+                skipReason: null,
                 updatedAt: new Date(),
             },
         });

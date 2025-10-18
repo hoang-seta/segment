@@ -42,6 +42,10 @@ model Clip {
   qaComment    String?
   qaLockedBy   String?
   qaLockedAt   DateTime?
+  isSkipped      Boolean   @default(false)
+  skipReason     String?
+  skippedBy      String?
+  skippedAt      DateTime?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 }
